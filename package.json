@@ -32,6 +32,8 @@
     "dev:main": "tsc -p tsconfig.main.json --watch",
     "dev:preload": "tsc -p tsconfig.preload.json --watch",
     "dev:renderer": "vite",
+    "clean": "rm -rf dist release",
+    "prebuild": "npm run clean",
     "build": "npm run build:main && npm run build:preload && npm run build:renderer",
     "build:main": "tsc -p tsconfig.main.json",
     "build:preload": "tsc -p tsconfig.preload.json",
@@ -96,9 +98,19 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "assets/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["arm64", "x64"]
+        }
       ]
     },
     "win": {
@@ -117,8 +129,13 @@
       "category": "Development"
     },
     "files": [
-      "dist/**/*",
-      "package.json"
+      "dist/main/**/*",
+      "dist/renderer/**/*",
+      "dist/shared/**/*",
+      "package.json",
+      "!dist/main/**/*.map",
+      "!dist/renderer/**/*.map",
+      "!dist/shared/**/*.map"
     ],
     "extraResources": [
       {
@@ -128,6 +145,9 @@
           "**/*"
         ]
       }
+    ],
+    "asarUnpack": [
+      "node_modules/sharp/**/*"
     ]
   }
 }

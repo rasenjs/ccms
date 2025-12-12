@@ -86,11 +86,39 @@ An Electron tray app for quickly switching Claude Code model/provider configurat
 
 ### Desktop app
 
-Download installers from the Releases page:
+Download installers from the [Releases](https://github.com/rasenjs/ccms/releases) page:
 
 - macOS: `.dmg`
 - Windows: `.exe`
 - Linux: `.AppImage` / `.deb`
+
+#### macOS: "App is damaged" issue
+
+If macOS shows "app is damaged and can't be opened", this is due to missing Apple code signing. You can bypass this with:
+
+**Method 1: System Settings** ⭐️ **Recommended**
+
+1. Try to open the app; macOS will show a warning
+2. Open "System Settings" → "Privacy & Security"
+3. In the "Security" section, you'll see: "'Claude Code Model Switcher' was blocked from use because it is not from an identified developer"
+4. Click **"Open Anyway"**
+5. Confirm by clicking **"Open"** in the dialog
+
+> 💡 Tip: This message only appears for about 1 hour after attempting to open the app. If you don't see it, try opening the app again.
+
+**Method 2: Right-click open**
+
+1. Find the app in Finder
+2. Hold Control and click (or right-click) the app icon
+3. Select "Open"
+4. Click "Open" in the dialog (this time it has an Open button)
+
+**Method 3: Terminal command**
+
+```bash
+# Remove quarantine attribute
+xattr -cr "/Applications/Claude Code Model Switcher.app"
+```
 
 ### First run
 

@@ -1,6 +1,6 @@
 {
   "name": "cc-model-switcher",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "description": "A tray application for managing Claude Code model configurations",
   "main": "dist/main/index.js",

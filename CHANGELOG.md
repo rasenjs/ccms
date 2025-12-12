@@ -1,4 +1,20 @@
- # Changelog
+# Changelog
+
+
+
+# [0.2.0](/compare/v0.1.1...v0.2.0) (2025-12-12)
+
+
+### Bug Fixes
+
+* **windows:** improve dialog styling and taskbar behavior a07bbad
+
+
+### Features
+
+* 导出 applyProviderIcons 函数并优化托盘图标交互逻辑 539b366
+
+# Changelog
 
 
 

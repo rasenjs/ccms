@@ -36,8 +36,9 @@
 
 ```bash
 # macOS/Linux: 设置配置目录权限
-chmod 700 ~/.config/cc-models-provider-switcher
+chmod 700 ~/.config/cc-model-switcher
 chmod 600 ~/.claude/settings.json
+
 ```
 
 ## Known Issues

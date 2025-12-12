@@ -67,7 +67,7 @@ function buildTrayIconForCurrentProvider(): NativeImage {
   // Determine active provider (best-effort)
   const currentProvider = configManagerRef?.getConfig?.().currentProvider ?? null;
 
-  // Badge file: ~/.config/cc-models-provider-switcher/providers/{providerId}/badge.png
+  // Badge file: ~/.config/cc-model-switcher/providers/{providerId}/badge.png
   let badgePath: string | null = null;
   if (currentProvider) {
     try {

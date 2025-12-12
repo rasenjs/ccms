@@ -141,7 +141,7 @@
 
 想要为 Roadmap 做贡献？
 
-1. **提议新功能**：在 [Issues](https://github.com/yourusername/cc-models-provider-switcher/issues) 中创建功能请求
+1. **提议新功能**：在 [Issues](https://github.com/rasenjs/ccms/issues) 中创建功能请求
 2. **投票支持**：为您感兴趣的 Issue 点赞 👍
 3. **提交 PR**：选择一个功能开始实现
 4. **参与讨论**：在 Discussions 中分享您的想法

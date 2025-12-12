@@ -1,3 +1,4 @@
+import { app } from 'electron';
 import Store from 'electron-store';
 import fs from 'fs';
 import path from 'path';
@@ -15,6 +16,9 @@ import { ensureProviderDir, forceUpdatePresetScript } from './providers/script-l
 const CLAUDE_CONFIG_DIR = path.join(os.homedir(), '.claude');
 const CLAUDE_SETTINGS_FILE = path.join(CLAUDE_CONFIG_DIR, 'settings.json');
 
+const STORE_NAME = 'cc-model-switcher';
+const LEGACY_STORE_NAME = 'cc-models-provider-switcher';
+
 interface StoreSchema {
   config: AppConfig;
 }
@@ -23,8 +27,10 @@ export class ConfigManager {
   private store: Store<StoreSchema>;
 
   constructor() {
+    this.migrateLegacyStoreFileIfNeeded();
+
     this.store = new Store<StoreSchema>({
-      name: 'cc-models-provider-switcher',
+      name: STORE_NAME,
       defaults: {
         config: {
           language: 'en',
@@ -59,6 +65,21 @@ export class ConfigManager {
   private ensureClaudeConfigDir() {
     if (!fs.existsSync(CLAUDE_CONFIG_DIR)) {
       fs.mkdirSync(CLAUDE_CONFIG_DIR, { recursive: true });
+    }
+  }
+
+  private migrateLegacyStoreFileIfNeeded() {
+    try {
+      const userData = app.getPath('userData');
+      const legacyPath = path.join(userData, `${LEGACY_STORE_NAME}.json`);
+      const newPath = path.join(userData, `${STORE_NAME}.json`);
+
+      if (fs.existsSync(legacyPath) && !fs.existsSync(newPath)) {
+        fs.copyFileSync(legacyPath, newPath);
+        console.log('[Config] 已迁移旧配置存储文件');
+      }
+    } catch {
+      // 静默忽略迁移失败
     }
   }
 
@@ -182,7 +203,7 @@ export class ConfigManager {
     this.store.set('config', config);
     
     // 清理 provider 文件夹（可选，保留文件以防误删）
-    // 用户可以手动删除 ~/.config/cc-models-provider-switcher/providers/{providerId}
+    // 用户可以手动删除 ~/.config/cc-model-switcher/providers/{providerId}
     
     return true;
   }

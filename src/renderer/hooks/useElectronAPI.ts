@@ -99,7 +99,7 @@ function createMockAPI(): ElectronAPI {
     updateProvider: async () => {},
     addProvider: async () => {},
     deleteProvider: async () => true,
-    getScriptPath: async () => '~/.config/cc-models-provider-switcher/providers',
+    getScriptPath: async () => '~/.config/cc-model-switcher/providers',
     getScriptContent: async () => '// Default script',
     saveScript: async () => {},
     openScriptEditor: async () => {},

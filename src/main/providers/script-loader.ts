@@ -2,7 +2,7 @@
  * 模型列表脚本加载器
  * 
  * 此模块负责管理 provider 的配置文件夹
- * 每个 provider 对应一个文件夹：~/.config/cc-models-provider-switcher/providers/{providerId}/
+ * 每个 provider 对应一个文件夹：~/.config/cc-model-switcher/providers/{providerId}/
  * 文件夹包含：
  *   - config.json: provider 配置
  *   - script.js: 模型列表获取脚本
@@ -30,12 +30,31 @@ const getConfigBaseDir = () => {
   return path.join(os.homedir(), '.config');
 };
 
-const PROVIDERS_DIR = path.join(getConfigBaseDir(), 'cc-models-provider-switcher', 'providers');
+const APP_DIR_NAME = 'cc-model-switcher';
+const LEGACY_APP_DIR_NAME = 'cc-models-provider-switcher';
+
+const PROVIDERS_DIR = path.join(getConfigBaseDir(), APP_DIR_NAME, 'providers');
+const LEGACY_PROVIDERS_DIR = path.join(getConfigBaseDir(), LEGACY_APP_DIR_NAME, 'providers');
+
+function migrateLegacyProvidersDirIfNeeded(): void {
+  try {
+    if (!fs.existsSync(PROVIDERS_DIR) && fs.existsSync(LEGACY_PROVIDERS_DIR)) {
+      const baseDir = getConfigBaseDir();
+      const legacyRoot = path.join(baseDir, LEGACY_APP_DIR_NAME);
+      const newRoot = path.join(baseDir, APP_DIR_NAME);
+      fs.mkdirSync(path.dirname(newRoot), { recursive: true });
+      fs.cpSync(legacyRoot, newRoot, { recursive: true });
+    }
+  } catch {
+    // 静默忽略迁移失败
+  }
+}
 
 /**
  * 确保 providers 目录存在
  */
 export function ensureProvidersDir(): void {
+  migrateLegacyProvidersDirIfNeeded();
   if (!fs.existsSync(PROVIDERS_DIR)) {
     fs.mkdirSync(PROVIDERS_DIR, { recursive: true });
   }
@@ -45,6 +64,7 @@ export function ensureProvidersDir(): void {
  * 获取 provider 的文件夹路径
  */
 export function getProviderDir(providerId: ProviderId): string {
+  migrateLegacyProvidersDirIfNeeded();
   return path.join(PROVIDERS_DIR, providerId);
 }
 

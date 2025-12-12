@@ -2,11 +2,15 @@
 
 <div align="center">
 
+<img src="assets/icon@1024.png" width="96" height="96" alt="Claude Code Model Switcher" />
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)
 
 一个基于 Electron 的系统托盘应用，用于快速切换 Claude Code 的模型配置。
+
+[English README](README.en.md)
 
 [功能特性](#功能特性) •
 [安装使用](#安装使用) •
@@ -16,6 +20,24 @@
 </div>
 
 ---
+
+## 截图
+
+### 主界面
+
+![主界面](./snapshots/main.png)
+
+### 配置
+
+![配置](./snapshots/config.png)
+
+### 托盘
+
+![托盘](./snapshots/tray.png)
+
+### 深色模式
+
+![深色模式](./snapshots/dark.png)
 
 ## 功能特性
 
@@ -66,7 +88,7 @@
 
 #### 下载安装
 
-从 [Releases](https://github.com/yourusername/cc-models-provider-switcher/releases) 页面下载对应平台的安装包：
+从 [Releases](https://github.com/rasenjs/ccms/releases) 页面下载对应平台的安装包：
 
 | 平台        | 文件格式             | 说明                            |
 | ----------- | -------------------- | ------------------------------- |
@@ -105,11 +127,11 @@
 
 ```bash
 # 方式一：全局安装（推荐）
-npm install -g cc-models-provider-switcher
+npm install -g cc-model-switcher
 
 # 方式二：手动安装（从源码）
-git clone https://github.com/yourusername/cc-models-provider-switcher.git
-cd cc-models-provider-switcher
+git clone git@github.com:rasenjs/ccms.git cc-model-switcher
+cd cc-model-switcher
 npm install
 npm run build:cli
 npm link
@@ -119,27 +141,27 @@ npm link
 
 ```bash
 # 查看帮助
-cc-switcher help
+ccms help
 
 # 列出所有 Provider（标记当前激活）
-cc-switcher list
+ccms list
 # 或
-cc-switcher ls
+ccms ls
 
 # 切换到指定 Provider
-cc-switcher switch <provider-id>
+ccms switch <provider-id>
 
 # 显示当前配置详情
-cc-switcher current
+ccms current
 # 或
-cc-switcher show
+ccms show
 ```
 
 ### 💡 使用示例
 
 ```bash
 # 查看所有可用 Provider
-$ cc-switcher list
+$ ccms list
 Available Providers:
   ▶ kimi         - Kimi K2
     glm          - 智谱 GLM
@@ -148,13 +170,13 @@ Available Providers:
     copilot      - GitHub Copilot
 
 # 切换到 GLM
-$ cc-switcher switch glm
+$ ccms switch glm
 ✓ Switched to provider: glm
   Config: ~/.claude/settings.json
   Backup: ~/.claude/settings.json.backup.2025-12-11T10-30-00-000Z
 
 # 查看当前配置
-$ cc-switcher current
+$ ccms current
 Current Provider: glm (智谱 GLM)
 
 Configuration:
@@ -169,10 +191,10 @@ Configuration:
 
 ### 🔧 配置位置
 
-| 平台            | 配置目录                                 |
-| --------------- | ---------------------------------------- |
-| **macOS/Linux** | `~/.config/cc-models-provider-switcher/` |
-| **Windows**     | `%APPDATA%\cc-models-provider-switcher\` |
+| 平台            | 配置目录                       |
+| --------------- | ------------------------------ |
+| **macOS/Linux** | `~/.config/cc-model-switcher/` |
+| **Windows**     | `%APPDATA%\cc-model-switcher\` |
 
 CLI 工具会读取桌面应用的配置，反之亦然。你可以在桌面应用中添加 Provider，然后在服务器上用 CLI 切换。
 
@@ -188,8 +210,8 @@ CLI 工具会读取桌面应用的配置，反之亦然。你可以在桌面应�
 ### 📥 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/cc-models-provider-switcher.git
-cd cc-models-provider-switcher
+git clone git@github.com:rasenjs/ccms.git cc-model-switcher
+cd cc-model-switcher
 npm install
 ```
 
@@ -206,7 +228,7 @@ npm run dev:main
 npm run dev:renderer
 ```
 
-访问 `http://localhost:5173` 查看渲染进程，主进程会自动在 Electron 中运行。
+访问 `http://localhost:9527` 查看渲染进程，主进程会自动在 Electron 中运行。
 
 ### 🔨 构建
 
@@ -244,6 +266,8 @@ npm run package -- --linux   # Linux
 
 输出目录：`dist/`
 
+electron-builder 打包输出目录：`release/`
+
 ### 🧪 测试 CLI
 
 ```bash
@@ -251,9 +275,10 @@ npm run package -- --linux   # Linux
 npm run build:cli
 
 # 直接运行（无需安装）
-node dist/cli/cli/index.js list
-node dist/cli/cli/index.js switch kimi
-node dist/cli/cli/index.js current
+node dist/cli/index.js list
+node dist/cli/index.js switch kimi
+node dist/cli/index.js current
+
 ```
 
 ---
@@ -261,7 +286,7 @@ node dist/cli/cli/index.js current
 ## 项目结构
 
 ```
-cc-models-provider-switcher/
+cc-model-switcher/
 ├── src/
 │   ├── main/                    # Electron 主进程
 │   │   ├── index.ts             # 主入口，IPC 通信

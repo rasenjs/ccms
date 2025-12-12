@@ -14,5 +14,8 @@
   "search.exclude": {
     "**/node_modules": true,
     "**/dist": true
-  }
+  },
+  "i18n-ally.localesPaths": [
+    "src/renderer/i18n"
+  ]
 }

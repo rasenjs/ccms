@@ -6,7 +6,7 @@
 
 ### 报告 Bug
 
-如果您发现了 bug，请通过 [GitHub Issues](https://github.com/yourusername/cc-models-provider-switcher/issues) 提交，并包含：
+如果您发现了 bug，请通过 [GitHub Issues](https://github.com/rasenjs/ccms/issues) 提交，并包含：
 
 - 清晰的标题和描述
 - 重现步骤
@@ -18,7 +18,7 @@
 
 如果您有新功能的想法：
 
-1. 先检查 [Issues](https://github.com/yourusername/cc-models-provider-switcher/issues) 中是否已有类似建议
+1. 先检查 [Issues](https://github.com/rasenjs/ccms/issues) 中是否已有类似建议
 2. 创建新 Issue 描述您的想法，包括：
    - 功能描述
    - 使用场景
@@ -29,7 +29,7 @@
 1. **Fork 仓库**并克隆到本地
 
    ```bash
-   git clone https://github.com/yourusername/cc-models-provider-switcher.git
+   git clone git@github.com:rasenjs/ccms.git cc-model-switcher
    ```
 
 2. **创建新分支**
@@ -113,6 +113,6 @@ npm run dev
 
 ## 问题？
 
-如有任何疑问，请通过 [Issues](https://github.com/yourusername/cc-models-provider-switcher/issues) 或邮件联系维护者。
+如有任何疑问，请通过 [Issues](https://github.com/rasenjs/ccms/issues) 或邮件联系维护者。
 
 感谢您的贡献！🎉

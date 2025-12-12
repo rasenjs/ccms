@@ -13,6 +13,9 @@ import type { ProviderConfig, ClaudeSettings } from '../shared/types';
 const CLAUDE_CONFIG_DIR = path.join(os.homedir(), '.claude');
 const CLAUDE_SETTINGS_FILE = path.join(CLAUDE_CONFIG_DIR, 'settings.json');
 
+const APP_DIR_NAME = 'cc-model-switcher';
+const LEGACY_APP_DIR_NAME = 'cc-models-provider-switcher';
+
 // 跨平台配置目录
 const getConfigBaseDir = () => {
   const platform = os.platform();
@@ -22,8 +25,21 @@ const getConfigBaseDir = () => {
   return path.join(os.homedir(), '.config');
 };
 
-const CONFIG_DIR = path.join(getConfigBaseDir(), 'cc-models-provider-switcher');
+const CONFIG_DIR = path.join(getConfigBaseDir(), APP_DIR_NAME);
+const LEGACY_CONFIG_DIR = path.join(getConfigBaseDir(), LEGACY_APP_DIR_NAME);
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+const LEGACY_CONFIG_FILE = path.join(LEGACY_CONFIG_DIR, 'config.json');
+
+function migrateLegacyConfigDirIfNeeded() {
+  try {
+    if (!fs.existsSync(CONFIG_DIR) && fs.existsSync(LEGACY_CONFIG_DIR)) {
+      fs.mkdirSync(path.dirname(CONFIG_DIR), { recursive: true });
+      fs.cpSync(LEGACY_CONFIG_DIR, CONFIG_DIR, { recursive: true });
+    }
+  } catch {
+    // 静默忽略迁移失败
+  }
+}
 
 // 颜色输出
 const colors = {
@@ -54,6 +70,7 @@ function info(message: string) {
 
 // 确保配置目录存在
 function ensureConfigDir() {
+  migrateLegacyConfigDirIfNeeded();
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
   }
@@ -64,7 +81,16 @@ function ensureConfigDir() {
 
 // 读取配置
 function loadConfig(): { currentProvider: string; providers: Record<string, ProviderConfig> } {
+  migrateLegacyConfigDirIfNeeded();
   if (!fs.existsSync(CONFIG_FILE)) {
+    if (fs.existsSync(LEGACY_CONFIG_FILE)) {
+      const legacyContent = fs.readFileSync(LEGACY_CONFIG_FILE, 'utf-8');
+      const legacyConfig = JSON.parse(legacyContent);
+      return {
+        currentProvider: legacyConfig.currentProvider || 'kimi',
+        providers: legacyConfig.providers || INITIAL_PROVIDERS,
+      };
+    }
     return {
       currentProvider: 'kimi',
       providers: INITIAL_PROVIDERS as Record<string, ProviderConfig>,
@@ -205,7 +231,7 @@ function showHelp() {
   log('用于无显示屏服务器环境的命令行工具\n', 'cyan');
   
   log('用法:', 'yellow');
-  log('  cc-switcher <命令> [参数]\n');
+  log('  ccms <命令> [参数]\n');
   
   log('命令:', 'yellow');
   log('  list, ls           列出所有可用的 Provider');
@@ -214,9 +240,9 @@ function showHelp() {
   log('  help, -h, --help   显示帮助信息\n');
   
   log('示例:', 'yellow');
-  log('  cc-switcher list');
-  log('  cc-switcher switch kimi');
-  log('  cc-switcher current\n');
+  log('  ccms list');
+  log('  ccms switch kimi');
+  log('  ccms current\n');
   
   log('支持的 Provider ID:', 'yellow');
   Object.entries(INITIAL_PROVIDERS).forEach(([id, provider]) => {
@@ -245,7 +271,7 @@ function main() {
       case 'switch':
         if (!args[1]) {
           error('请指定 Provider ID');
-          log('用法: cc-switcher switch <id>');
+          log('用法: ccms switch <id>');
           process.exit(1);
         }
         switchProvider(args[1]);
@@ -258,7 +284,7 @@ function main() {
         
       default:
         error(`未知命令: ${command}`);
-        log('运行 "cc-switcher help" 查看帮助');
+        log('运行 "ccms help" 查看帮助');
         process.exit(1);
     }
   } catch (err) {

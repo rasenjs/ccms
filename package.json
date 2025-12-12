@@ -1,12 +1,12 @@
 {
-  "name": "cc-models-provider-switcher",
-  "version": "1.0.0",
+  "name": "cc-model-switcher",
+  "version": "0.1.0",
   "type": "module",
   "description": "A tray application for managing Claude Code model configurations",
   "main": "dist/main/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/cc-models-provider-switcher.git"
+    "url": "git@github.com:rasenjs/ccms.git"
   },
   "keywords": [
     "claude",
@@ -24,9 +24,9 @@
   "author": "Your Name <your.email@example.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/yourusername/cc-models-provider-switcher/issues"
+    "url": "https://github.com/rasenjs/ccms/issues"
   },
-  "homepage": "https://github.com/yourusername/cc-models-provider-switcher#readme",
+  "homepage": "https://github.com/rasenjs/ccms#readme",
   "scripts": {
     "dev": "concurrently \"npm run dev:main\" \"npm run dev:preload\" \"npm run dev:renderer\"",
     "dev:main": "tsc -p tsconfig.main.json --watch",
@@ -42,12 +42,15 @@
     "cli": "node dist/cli/index.js",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "gen:icons": "node scripts/generate-icons.mjs"
+    "gen:icons": "node scripts/generate-icons.mjs",
+    "release": "release-it",
+    "release:ci": "release-it --ci"
   },
   "bin": {
-    "cc-switcher": "./dist/cli/cli/index.js"
+    "ccms": "./dist/cli/index.js"
   },
   "devDependencies": {
+    "@release-it/conventional-changelog": "^10.0.3",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.1.18",
     "@types/node": "^20.10.0",
@@ -61,6 +64,7 @@
     "eslint": "^8.55.0",
     "png-to-ico": "^3.0.1",
     "postcss": "^8.5.6",
+    "release-it": "^19.1.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.3.2",

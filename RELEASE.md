@@ -43,22 +43,22 @@ npm run package -- --mac --win --linux
 npm run build:cli
 ```
 
-生成文件：`dist/cli/cli/index.js`
+生成文件：`dist/cli/index.js`
 
 ### 本地测试
 
 ```bash
 # 查看帮助
-node dist/cli/cli/index.js help
+node dist/cli/index.js help
 
 # 列出所有 provider
-node dist/cli/cli/index.js list
+node dist/cli/index.js list
 
 # 切换 provider
-node dist/cli/cli/index.js switch kimi
+node dist/cli/index.js switch kimi
 
 # 显示当前配置
-node dist/cli/cli/index.js current
+node dist/cli/index.js current
 ```
 
 ### 全局安装
@@ -69,14 +69,14 @@ npm run build:cli
 npm link
 
 # 使用
-cc-switcher list
-cc-switcher switch kimi
+ccms list
+ccms switch kimi
 
 # 方式 2: 发布到 npm
 npm publish
 
 # 安装
-npm install -g cc-models-provider-switcher
+npm install -g cc-model-switcher
 ```
 
 ### 无 npm 环境使用
@@ -85,14 +85,14 @@ npm install -g cc-models-provider-switcher
 
 ```bash
 # 复制文件
-scp -r dist/cli user@server:/opt/cc-switcher/
+scp -r dist/cli user@server:/opt/ccms/
 
 # 在服务器上创建软链接
-sudo ln -s /opt/cc-switcher/cli/index.js /usr/local/bin/cc-switcher
-sudo chmod +x /opt/cc-switcher/cli/index.js
+sudo ln -s /opt/ccms/cli/index.js /usr/local/bin/ccms
+sudo chmod +x /opt/ccms/cli/index.js
 
 # 使用
-cc-switcher list
+ccms list
 ```
 
 ## CLI 命令说明
@@ -100,9 +100,9 @@ cc-switcher list
 ### 列出所有 Provider
 
 ```bash
-cc-switcher list
+ccms list
 # 或
-cc-switcher ls
+ccms ls
 ```
 
 显示所有可用的 Provider，当前激活的会有 ▶ 标记。
@@ -110,15 +110,15 @@ cc-switcher ls
 ### 切换 Provider
 
 ```bash
-cc-switcher switch <provider-id>
+ccms switch <provider-id>
 ```
 
 示例：
 
 ```bash
-cc-switcher switch kimi
-cc-switcher switch glm
-cc-switcher switch deepseek
+ccms switch kimi
+ccms switch glm
+ccms switch deepseek
 ```
 
 切换后会：
@@ -130,9 +130,9 @@ cc-switcher switch deepseek
 ### 显示当前配置
 
 ```bash
-cc-switcher current
+ccms current
 # 或
-cc-switcher show
+ccms show
 ```
 
 显示当前激活的 Provider 详细信息。
@@ -160,10 +160,10 @@ cc-switcher show
 
 ## 配置文件位置
 
-- 桌面应用配置：`~/.config/cc-models-provider-switcher/config.json`
+- 桌面应用配置：`~/.config/cc-model-switcher/config.json`
 - Claude Code 配置：`~/.claude/settings.json`
 - 配置备份：`~/.claude/settings.json.backup.*`
-- Provider 脚本：`~/.config/cc-models-provider-switcher/providers/{id}/script.js`
+- Provider 脚本：`~/.config/cc-model-switcher/providers/{id}/script.js`
 
 ## 注意事项
 

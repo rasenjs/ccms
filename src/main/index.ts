@@ -41,13 +41,13 @@ function resolveProviderBadge(providerId: ProviderId): string | null {
   }
 }
 
-function applyProviderIcons(providerId: ProviderId) {
+export function applyProviderIcons(providerId: ProviderId) {
   const assetsPath = getAssetsPath();
   const base1x = path.join(assetsPath, 'icon.png');
   const base2x = path.join(assetsPath, 'icon@1024.png');
   const badge = resolveProviderBadge(providerId);
 
-  // 1) macOS Dock icon
+  // 1) macOS Dock icon（当窗口显示时设置）
   if (process.platform === 'darwin') {
     try {
       if (fs.existsSync(base1x) && fs.existsSync(base2x)) {
@@ -169,7 +169,7 @@ function createWindow() {
     titleBarStyle: isMac ? 'hiddenInset' : 'default',  // macOS 隐藏标题栏但保留红绿灯
     trafficLightPosition: isMac ? { x: 15, y: 15 } : undefined,  // macOS 红绿灯位置
     resizable: true,
-    skipTaskbar: true,  // 不显示在任务栏
+    skipTaskbar: !isMac,  // 仅在非 macOS 上隐藏任务栏图标
     ...(isMac ? {} : { icon: windowIcon }),
     webPreferences: {
       nodeIntegration: false,
@@ -209,6 +209,7 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
 
+  // 关闭时最小化到托盘（标准行为）
   mainWindow.on('close', (event) => {
     event.preventDefault();
     mainWindow?.hide();
@@ -557,17 +558,17 @@ app.whenReady().then(async () => {
   copilotManager = new CopilotManager();
   modelFetcher = new ModelFetcher();
 
+  // macOS: 启动时不隐藏 Dock，让窗口保持正常行为
+  // Dock 会在窗口首次隐藏后才隐藏
+
   // 创建窗口和托盘
   createWindow();
 
-  // Apply dynamic provider icons (Dock/taskbar) after managers/window are ready
+  // 设置初始 Dock/任务栏图标
   const initialProvider = configManager.getConfig().currentProvider;
   applyProviderIcons(initialProvider);
-  if (isDev) {
-    // 有些情况下需要在创建窗口后再设置一次 Dock icon
-    setTimeout(() => applyProviderIcons(initialProvider), 300);
-  }
-  createTray(configManager, mainWindow, copilotManager);
+  
+  createTray(configManager, mainWindow, copilotManager, applyProviderIcons);
 
   // 设置 IPC 处理器
   setupIpcHandlers();
@@ -600,7 +601,14 @@ app.whenReady().then(async () => {
   }
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    // macOS: 点击 Dock 图标时显示窗口
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.focus();
+      } else {
+        mainWindow.show();
+      }
+    } else if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });

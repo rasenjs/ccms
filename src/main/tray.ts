@@ -18,11 +18,18 @@ let configManagerRef: ConfigManager;
 let copilotManagerRef: CopilotManager | null = null;
 let mainWindowRef: BrowserWindow | null;
 let menuUpdateInterval: NodeJS.Timeout | null = null;
+let applyProviderIconsRef: ((providerId: ProviderId) => void) | null = null;
 
-export function createTray(configManager: ConfigManager, mainWindow: BrowserWindow | null, copilotManager?: CopilotManager) {
+export function createTray(
+  configManager: ConfigManager, 
+  mainWindow: BrowserWindow | null, 
+  copilotManager?: CopilotManager,
+  applyProviderIcons?: (providerId: ProviderId) => void
+) {
   configManagerRef = configManager;
   mainWindowRef = mainWindow;
   copilotManagerRef = copilotManager || null;
+  applyProviderIconsRef = applyProviderIcons || null;
 
   // 创建托盘图标（支持按当前 Provider 叠加图标）
   const icon = buildTrayIconForCurrentProvider();
@@ -39,19 +46,33 @@ export function createTray(configManager: ConfigManager, mainWindow: BrowserWind
   tray = new Tray(icon);
   tray.setToolTip(tMain(app.getLocale(), 'tray.tooltip'));
 
-  updateTrayMenu(configManager);
+  // 不使用 setContextMenu，避免与 click 事件冲突
+  // updateTrayMenu(configManager);
 
   // 定期刷新菜单状态（每 5 秒）
   if (menuUpdateInterval) {
     clearInterval(menuUpdateInterval);
   }
   menuUpdateInterval = setInterval(() => {
-    updateTrayMenu(configManager);
+    // 菜单会在 right-click 时动态构建
   }, 5000);
 
+  // 左键：显示/隐藏主窗口
   tray.on('click', () => {
-    mainWindowRef?.show();
-    mainWindowRef?.focus();
+    if (mainWindowRef?.isVisible()) {
+      mainWindowRef.hide();
+    } else {
+      mainWindowRef?.show();
+      mainWindowRef?.focus();
+    }
+  });
+
+  // 右键：显示菜单
+  tray.on('right-click', async () => {
+    if (tray) {
+      const menu = await buildContextMenu(configManagerRef);
+      tray.popUpContextMenu(menu);
+    }
   });
 }
 
@@ -201,16 +222,11 @@ async function isProviderAvailable(providerId: ProviderId, config: ReturnType<Co
   return !!providerConfig.authToken;
 }
 
-export async function updateTrayMenu(configManager: ConfigManager) {
-  if (!tray) return;
-
+async function buildContextMenu(configManager: ConfigManager): Promise<Menu> {
   const config = configManager.getConfig();
   const locale = config.language ?? app.getLocale();
   const currentProvider = config.currentProvider;
   const providerList = configManager.getProviderList();
-
-  // Keep tooltip in sync with language
-  tray.setToolTip(tMain(locale, 'tray.tooltip'));
 
   // 获取当前 Provider 名称
   const currentProviderConfig = config.providers[currentProvider];
@@ -231,7 +247,7 @@ export async function updateTrayMenu(configManager: ConfigManager) {
           if (!isAvailable && !isCurrent) return;
           try {
             await configManager.switchProvider(provider.id);
-            updateTrayMenu(configManager);
+            refreshTrayIcon();
           } catch (error) {
             console.error('切换 Provider 失败:', error);
           }
@@ -268,7 +284,19 @@ export async function updateTrayMenu(configManager: ConfigManager) {
     },
   ]);
 
-  tray.setContextMenu(contextMenu);
+  return contextMenu;
+}
+
+// 保留旧的 updateTrayMenu 用于兼容性（仅更新图标）
+export async function updateTrayMenu(configManager: ConfigManager) {
+  if (!tray) return;
+  
+  const config = configManager.getConfig();
+  const locale = config.language ?? app.getLocale();
+  
+  // Keep tooltip in sync with language
+  tray.setToolTip(tMain(locale, 'tray.tooltip'));
+  
   // Keep tray icon in sync with current provider
   refreshTrayIcon();
 }

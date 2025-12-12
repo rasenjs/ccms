@@ -9,13 +9,13 @@ import { ConfigManager } from './config.js';
 import { CopilotManager } from './providers/copilot.js';
 import { ModelFetcher } from './providers/model-fetcher.js';
 import { setupDialogHandlers } from './dialog-manager.js';
-import { 
-  ensureProvidersDir, 
-  getScriptsDir, 
-  getProviderScript, 
+import {
+  ensureProvidersDir,
+  getScriptsDir,
+  getProviderScript,
   saveProviderScript,
   getProviderDir,
-  ensureProviderDir
+  ensureProviderDir,
 } from './providers/script-loader.js';
 import type { ProviderId, ProviderConfig } from '../shared/types';
 import { BUILTIN_PROVIDER_COPILOT } from '../shared/constants.js';
@@ -156,7 +156,7 @@ function createWindow() {
   const isMac = os.platform() === 'darwin';
   const assetsPath = getAssetsPath();
   const windowIcon = path.join(assetsPath, 'icon.png');
-  
+
   mainWindow = new BrowserWindow({
     width: 560,
     height: 685,
@@ -165,11 +165,11 @@ function createWindow() {
     maxWidth: 560,
     maxHeight: 800,
     show: false,
-    frame: !isMac,  // macOS 使用自定义标题栏，其他平台使用原生
-    titleBarStyle: isMac ? 'hiddenInset' : 'default',  // macOS 隐藏标题栏但保留红绿灯
-    trafficLightPosition: isMac ? { x: 15, y: 15 } : undefined,  // macOS 红绿灯位置
+    frame: false, // 所有平台都使用自定义标题栏
+    titleBarStyle: isMac ? 'hiddenInset' : 'default', // macOS 隐藏标题栏但保留红绿灯
+    trafficLightPosition: isMac ? { x: 15, y: 15 } : undefined, // macOS 红绿灯位置
     resizable: true,
-    skipTaskbar: !isMac,  // 仅在非 macOS 上隐藏任务栏图标
+    skipTaskbar: false, // 显示任务栏图标
     ...(isMac ? {} : { icon: windowIcon }),
     webPreferences: {
       nodeIntegration: false,
@@ -194,13 +194,23 @@ function createWindow() {
       console.error('[Main] Renderer became unresponsive');
     });
 
-    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
-      console.error('[Main] did-fail-load:', { errorCode, errorDescription, validatedURL });
-    });
+    mainWindow.webContents.on(
+      'did-fail-load',
+      (_event, errorCode, errorDescription, validatedURL) => {
+        console.error('[Main] did-fail-load:', { errorCode, errorDescription, validatedURL });
+      }
+    );
 
-    mainWindow.webContents.on('did-fail-provisional-load', (_event, errorCode, errorDescription, validatedURL) => {
-      console.error('[Main] did-fail-provisional-load:', { errorCode, errorDescription, validatedURL });
-    });
+    mainWindow.webContents.on(
+      'did-fail-provisional-load',
+      (_event, errorCode, errorDescription, validatedURL) => {
+        console.error('[Main] did-fail-provisional-load:', {
+          errorCode,
+          errorDescription,
+          validatedURL,
+        });
+      }
+    );
   }
 
   if (isDev) {
@@ -208,6 +218,12 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
+
+  // Windows: 启动时保持隐藏，通过托盘点击显示
+  // macOS: 通过 activate 事件显示（见下方）
+  mainWindow.on('ready-to-show', () => {
+    // 不自动显示，等待用户点击托盘
+  });
 
   // 关闭时最小化到托盘（标准行为）
   mainWindow.on('close', (event) => {
@@ -235,7 +251,7 @@ function setupIpcHandlers() {
       return false;
     }
   });
-  
+
   // 配置相关
   ipcMain.handle('config:get', () => {
     return configManager.getConfig();
@@ -257,7 +273,7 @@ function setupIpcHandlers() {
         }
       }
     }
-    
+
     await configManager.switchProvider(provider);
     updateTrayMenu(configManager);
 
@@ -277,10 +293,13 @@ function setupIpcHandlers() {
     return modelFetcher.fetchModels(provider, configWithToken);
   });
 
-  ipcMain.handle('provider:update', (_event, provider: ProviderId, config: Partial<ProviderConfig>) => {
-    configManager.updateProviderConfig(provider, config);
-    updateTrayMenu(configManager);
-  });
+  ipcMain.handle(
+    'provider:update',
+    (_event, provider: ProviderId, config: Partial<ProviderConfig>) => {
+      configManager.updateProviderConfig(provider, config);
+      updateTrayMenu(configManager);
+    }
+  );
 
   ipcMain.handle('provider:badge:choose', async (_event, provider: ProviderId) => {
     if (!mainWindow) return false;
@@ -427,11 +446,11 @@ function setupIpcHandlers() {
   ipcMain.handle('provider:open-script-editor', (_event, provider: ProviderId) => {
     ensureProviderDir(provider);
     const scriptPath = path.join(getProviderDir(provider), 'script.js');
-    
+
     // 尝试使用 VSCode 打开，如果失败则使用系统默认编辑器
     const isWindows = os.platform() === 'win32';
     const codeCommand = isWindows ? 'code.cmd' : 'code';
-    
+
     exec(`${codeCommand} "${scriptPath}"`, (error: Error | null) => {
       if (error) {
         // VSCode 不可用，使用系统默认编辑器
@@ -441,26 +460,32 @@ function setupIpcHandlers() {
   });
 
   // 对话框相关
-  ipcMain.handle('dialog:show-input', async (_event, options: { title: string; message: string; defaultValue?: string; placeholder?: string }) => {
-    if (!mainWindow) return null;
-    
-    const result = await dialog.showMessageBox(mainWindow, {
-      type: 'question',
-      buttons: ['OK', 'Cancel'],
-      defaultId: 0,
-      title: options.title,
-      message: options.message,
-      detail: options.placeholder,
-    });
+  ipcMain.handle(
+    'dialog:show-input',
+    async (
+      _event,
+      options: { title: string; message: string; defaultValue?: string; placeholder?: string }
+    ) => {
+      if (!mainWindow) return null;
 
-    if (result.response === 1) {
-      return null; // Cancel
+      const result = await dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        buttons: ['OK', 'Cancel'],
+        defaultId: 0,
+        title: options.title,
+        message: options.message,
+        detail: options.placeholder,
+      });
+
+      if (result.response === 1) {
+        return null; // Cancel
+      }
+
+      // 简单的输入对话框实现，返回默认值
+      // 注：Electron 原生不支持输入对话框，需要在渲染进程中使用 HTML 输入
+      return options.defaultValue || '';
     }
-
-    // 简单的输入对话框实现，返回默认值
-    // 注：Electron 原生不支持输入对话框，需要在渲染进程中使用 HTML 输入
-    return options.defaultValue || '';
-  });
+  );
 
   ipcMain.handle('dialog:show-error', async (_event, message: string) => {
     if (!mainWindow) return;
@@ -471,14 +496,17 @@ function setupIpcHandlers() {
     });
   });
 
-  ipcMain.handle('provider:test-connection', async (_event, provider: ProviderId, token?: string) => {
-    const providerConfig = configManager.getProviderConfig(provider);
-    if (!providerConfig) {
-      return false;
+  ipcMain.handle(
+    'provider:test-connection',
+    async (_event, provider: ProviderId, token?: string) => {
+      const providerConfig = configManager.getProviderConfig(provider);
+      if (!providerConfig) {
+        return false;
+      }
+      const configWithToken = token ? { ...providerConfig, authToken: token } : providerConfig;
+      return modelFetcher.testConnection(provider, configWithToken);
     }
-    const configWithToken = token ? { ...providerConfig, authToken: token } : providerConfig;
-    return modelFetcher.testConnection(provider, configWithToken);
-  });
+  );
 
   // Copilot 相关
   ipcMain.handle('copilot:check-installed', () => {
@@ -505,6 +533,22 @@ function setupIpcHandlers() {
     return copilotManager.runAuthWithProgress();
   });
 
+  ipcMain.handle('copilot:auth-in-terminal', () => {
+    // 在系统终端中打开授权命令
+    const isWindows = os.platform() === 'win32';
+    const command = isWindows
+      ? `start cmd /k "copilot-api auth && pause"`
+      : `open -a Terminal.app -n --args bash -c "copilot-api auth; read -p 'Press Enter to close...'"`;
+
+    exec(command, (error) => {
+      if (error) {
+        console.error('[Main] 打开终端失败:', error);
+      }
+    });
+
+    return true;
+  });
+
   ipcMain.handle('copilot:check-token', () => {
     return copilotManager.checkToken();
   });
@@ -522,9 +566,12 @@ function setupIpcHandlers() {
   });
 
   // Copilot 事件监听（转发到渲染进程）
-  copilotManager.on('auth-progress', (data: { deviceCode?: string; verificationUrl?: string; message?: string }) => {
-    mainWindow?.webContents.send('copilot:auth-progress', data);
-  });
+  copilotManager.on(
+    'auth-progress',
+    (data: { deviceCode?: string; verificationUrl?: string; message?: string }) => {
+      mainWindow?.webContents.send('copilot:auth-progress', data);
+    }
+  );
 
   copilotManager.on('auth-output', (line: string) => {
     mainWindow?.webContents.send('copilot:output', line);
@@ -567,7 +614,7 @@ app.whenReady().then(async () => {
   // 设置初始 Dock/任务栏图标
   const initialProvider = configManager.getConfig().currentProvider;
   applyProviderIcons(initialProvider);
-  
+
   createTray(configManager, mainWindow, copilotManager, applyProviderIcons);
 
   // 设置 IPC 处理器
@@ -576,11 +623,11 @@ app.whenReady().then(async () => {
   // 自动启动 Copilot API（只要已安装且有 token，就自动启动服务保持就绪）
   const config = configManager.getConfig();
   console.log('[Main] 当前 Provider:', config.currentProvider);
-  
+
   const copilotInstalled = copilotManager.checkInstalled();
   const hasToken = copilotManager.checkToken();
   console.log('[Main] Copilot 安装状态:', copilotInstalled, ', Token 状态:', hasToken);
-  
+
   if (copilotInstalled && hasToken) {
     console.log('[Main] Copilot 已安装且已授权，尝试自动启动服务...');
     // 延迟启动，避免启动时竞争
@@ -589,7 +636,7 @@ app.whenReady().then(async () => {
       console.log('[Main] Copilot 服务运行状态:', isRunning);
       if (!isRunning) {
         console.log('[Main] 开始自动启动 Copilot 服务');
-        copilotManager.start().catch(err => {
+        copilotManager.start().catch((err) => {
           console.error('[Main] 自动启动 Copilot 失败:', err);
         });
       } else {

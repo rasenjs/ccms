@@ -31,21 +31,28 @@ function App() {
   const dialogRoute = window.location.hash.replace('#/', '');
   const isDialog = dialogRoute.startsWith('dialog/');
 
-  console.log('Current route:', window.location.hash, 'dialogRoute:', dialogRoute, 'isDialog:', isDialog);
+  console.log(
+    'Current route:',
+    window.location.hash,
+    'dialogRoute:',
+    dialogRoute,
+    'isDialog:',
+    isDialog
+  );
 
   // 如果是对话框路由，渲染对应的对话框组件
   if (isDialog) {
     const dialogType = dialogRoute.replace('dialog/', '');
     console.log('Rendering dialog:', dialogType);
-    
+
     if (dialogType === 'add-provider') {
       return <AddProviderDialog />;
     }
-    
+
     if (dialogType === 'edit-script') {
       return <EditScriptDialog />;
     }
-    
+
     return null;
   }
 
@@ -87,7 +94,7 @@ function App() {
       }
 
       // Preserve current selection if it still exists; otherwise fall back.
-      setSelectedProvider(prevSelected => {
+      setSelectedProvider((prevSelected) => {
         if (prevSelected && appConfig.providers[prevSelected]) return prevSelected;
         return appConfig.currentProvider;
       });
@@ -102,7 +109,7 @@ function App() {
     try {
       await api.switchProvider(provider);
       // 只更新当前 provider，不重新加载整个配置（避免闪烁）
-      setConfig(prev => prev ? { ...prev, currentProvider: provider } : null);
+      setConfig((prev) => (prev ? { ...prev, currentProvider: provider } : null));
       setSelectedProvider(provider);
     } catch (error) {
       console.error('切换 Provider 失败:', error);
@@ -131,7 +138,7 @@ function App() {
       <div className="flex h-screen items-center justify-center bg-default">
         <div className="text-center">
           <p className="mb-4 text-secondary">{t('app.configLoadFailed')}</p>
-          <button 
+          <button
             onClick={() => loadConfig()}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
           >
@@ -142,10 +149,16 @@ function App() {
     );
   }
 
+  const isMac = navigator.userAgent.includes('Macintosh');
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-default">
       {/* 自定义标题栏 */}
-      <div className="flex h-[52px] select-none items-center justify-between bg-gradient-to-r from-purple-600 to-indigo-600 px-4 pl-[85px] text-white">
+      <div
+        className={`flex h-[52px] select-none items-center justify-between bg-gradient-to-r from-purple-600 to-indigo-600 px-4 text-white ${
+          isMac ? 'pl-[85px]' : ''
+        }`}
+      >
         <div className="titlebar-drag flex flex-1 items-center">
           <span className="text-[13px] font-medium opacity-95">{t('app.title')}</span>
         </div>
@@ -155,16 +168,26 @@ function App() {
               className="flex h-8 w-8 items-center justify-center rounded transition-colors group-hover:bg-white/20 group-active:bg-white/30"
               title={`${t('app.theme')}: ${t(`app.themes.${themePref}`)}`}
             >
-              {themePref === 'dark' ? <Moon size={16} /> : themePref === 'light' ? <Sun size={16} /> : <Monitor size={16} />}
+              {themePref === 'dark' ? (
+                <Moon size={16} />
+              ) : themePref === 'light' ? (
+                <Sun size={16} />
+              ) : (
+                <Monitor size={16} />
+              )}
             </div>
             <select
               aria-label={t('app.theme')}
               className="absolute inset-0 h-8 w-8 cursor-pointer opacity-0"
               value={themePref}
               onChange={(e) => {
-                const next = (e.target.value === 'light' || e.target.value === 'dark' || e.target.value === 'system'
-                  ? e.target.value
-                  : 'system') as ThemePreference;
+                const next = (
+                  e.target.value === 'light' ||
+                  e.target.value === 'dark' ||
+                  e.target.value === 'system'
+                    ? e.target.value
+                    : 'system'
+                ) as ThemePreference;
                 setThemePref(next);
                 applyThemePreference(next);
                 saveThemePreference(next);
@@ -225,26 +248,30 @@ function App() {
         </div>
       </div>
 
-      <Tabs.Root value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="flex flex-1 flex-col overflow-hidden">
+      <Tabs.Root
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as TabType)}
+        className="flex flex-1 flex-col overflow-hidden"
+      >
         <div className="flex items-center justify-between border-b border-default bg-surface px-4">
           <Tabs.List className="flex gap-1">
-            <Tabs.Trigger 
+            <Tabs.Trigger
               value="providers"
               className="relative px-4 py-3 text-sm font-medium text-secondary transition-colors hover:text-default data-[state=active]:text-primary data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-0.5 data-[state=active]:after:bg-primary"
             >
               {t('app.tabs.providers')}
             </Tabs.Trigger>
-            <Tabs.Trigger 
+            <Tabs.Trigger
               value="config"
               className="relative px-4 py-3 text-sm font-medium text-secondary transition-colors hover:text-default data-[state=active]:text-primary data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-0.5 data-[state=active]:after:bg-primary"
             >
               {t('app.tabs.config')}
             </Tabs.Trigger>
           </Tabs.List>
-          
+
           <div className="flex items-center gap-3">
             {activeTab === 'providers' && (
-              <button 
+              <button
                 onClick={async () => {
                   await api.dialog.open({
                     id: 'add-provider',

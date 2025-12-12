@@ -41,6 +41,7 @@ export function createDialogWindow(options: DialogOptions): BrowserWindow {
   }
 
   const isMac = os.platform() === 'darwin';
+  const isWindows = os.platform() === 'win32';
   const parent = BrowserWindow.getAllWindows()[0]; // 获取主窗口作为父窗口
 
   const dialogWindow = new BrowserWindow({
@@ -55,19 +56,20 @@ export function createDialogWindow(options: DialogOptions): BrowserWindow {
     modal: true, // 模态窗口
     show: false,
     frame: false, // 使用自定义标题栏
-    transparent: true, // 支持透明和圆角
-    backgroundColor: '#00000000', // 透明背景
-    titleBarStyle: undefined,
+    titleBarStyle: isMac ? 'hiddenInset' : 'default', // macOS 隐藏标题栏，Windows 保持默认
+    transparent: isMac, // 仅 macOS 支持透明（Windows 透明会导致阴影和圆角失效）
+    backgroundColor: isMac ? '#00000000' : undefined, // 仅 macOS 使用透明背景
     autoHideMenuBar: true,
-    hasShadow: true, // 添加阴影
+    ...(isWindows && {
+      // Windows 特殊配置以支持圆角和阴影
+      roundedCorners: true,
+      backgroundMaterial: 'acrylic', // 使用毛玻璃效果
+    }),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      additionalArguments: [
-        `--dialog-id=${id}`,
-        `--dialog-data=${JSON.stringify(data || {})}`,
-      ],
+      additionalArguments: [`--dialog-id=${id}`, `--dialog-data=${JSON.stringify(data || {})}`],
     },
   });
 
@@ -132,7 +134,7 @@ export function setupDialogHandlers(): void {
   ipcMain.on('dialog:send-to-main', (_event, data: any) => {
     const allWindows = BrowserWindow.getAllWindows();
     // 找到主窗口（通常是第一个非对话框窗口）
-    const mainWindow = allWindows.find(win => {
+    const mainWindow = allWindows.find((win) => {
       // 检查是否为对话框窗口
       for (const dialogWin of dialogWindows.values()) {
         if (dialogWin.id === win.id) return false;

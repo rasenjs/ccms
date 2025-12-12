@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as Label from '@radix-ui/react-label';
 import { Copy, FileEdit, AlertCircle, RefreshCw, ImageUp, Trash2 } from 'lucide-react';
-import type { ProviderId, ProviderConfig as ProviderConfigType, ModelItem, ModelRole, CopilotStatus } from '../../shared/types';
+import type {
+  ProviderId,
+  ProviderConfig as ProviderConfigType,
+  ModelItem,
+  ModelRole,
+  CopilotStatus,
+} from '../../shared/types';
 import { useElectronAPI } from '../hooks/useElectronAPI';
 import { BUILTIN_PROVIDER_COPILOT } from '../../shared/constants';
 import { SearchableSelect } from './SearchableSelect';
@@ -22,11 +28,9 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
 
   const [badgeDataUrl, setBadgeDataUrl] = useState<string | null>(null);
   const [pendingBadge, setPendingBadge] = useState<
-    | { type: 'set'; srcPath: string; dataUrl: string }
-    | { type: 'clear' }
-    | null
+    { type: 'set'; srcPath: string; dataUrl: string } | { type: 'clear' } | null
   >(null);
-  
+
   const [formData, setFormData] = useState({
     authToken: config.authToken,
     baseUrl: config.baseUrl,
@@ -48,9 +52,11 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
   });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [authInfo, setAuthInfo] = useState<{ code?: string; url?: string }>({});
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const hasToken = isCopilot ? copilotStatus.hasToken : !!formData.authToken;
-  const copilotReady = isCopilot && copilotStatus.installed && copilotStatus.hasToken && copilotStatus.running;
+  const copilotReady =
+    isCopilot && copilotStatus.installed && copilotStatus.hasToken && copilotStatus.running;
 
   const checkCopilotStatus = useCallback(async () => {
     if (!api?.copilot?.getStatus) return;
@@ -67,15 +73,21 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
 
   useEffect(() => {
     if (!isCopilot || !api?.copilot?.onAuthProgress) return;
-    api.copilot.onAuthProgress((data: { deviceCode?: string; verificationUrl?: string; message?: string }) => {
-      if (data.deviceCode) {
-        setAuthInfo({ code: data.deviceCode, url: data.verificationUrl });
+    api.copilot.onAuthProgress(
+      (data: { deviceCode?: string; verificationUrl?: string; message?: string }) => {
+        if (data.deviceCode) {
+          setAuthInfo({ code: data.deviceCode, url: data.verificationUrl });
+        }
+        if (data.message?.includes('成功')) {
+          setAuthInfo({});
+          setAuthError(null); // 清除错误
+          setActionLoading(null); // 授权成功，清除 loading 状态
+          checkCopilotStatus();
+        } else if (data.message?.includes('失败') || data.message?.includes('出错')) {
+          setActionLoading(null); // 授权失败或出错，清除 loading 状态
+        }
       }
-      if (data.message?.includes('成功')) {
-        setAuthInfo({});
-        checkCopilotStatus();
-      }
-    });
+    );
     return () => api.copilot.removeAllListeners();
   }, [api, isCopilot, checkCopilotStatus]);
 
@@ -96,15 +108,13 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
   const fetchModels = async () => {
     if (!hasToken) return;
     if (isCopilot && !copilotReady) return;
-    
+
     setLoadingModels(true);
     setFetchError(null);
     try {
       const models = await api.getModels(provider, formData.authToken || undefined);
       // 去重：使用 Map 按 id 去重，保留第一次出现的模型
-      const uniqueModels = Array.from(
-        new Map(models.map(m => [m.id, m])).values()
-      );
+      const uniqueModels = Array.from(new Map(models.map((m) => [m.id, m])).values());
       setModelList(uniqueModels);
     } catch (error: any) {
       setFetchError(error?.message || t('providerConfig.models.fetchFailed'));
@@ -114,9 +124,9 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
   };
 
   const handleModelChange = (role: ModelRole, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      models: { ...prev.models, [role]: value }
+      models: { ...prev.models, [role]: value },
     }));
   };
 
@@ -167,12 +177,14 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
       const result = await api.testConnection(provider, formData.authToken);
       setTestResult({
         success: result,
-        message: result ? t('providerConfig.credentials.connectionSuccess') : t('providerConfig.credentials.connectionFailed')
+        message: result
+          ? t('providerConfig.credentials.connectionSuccess')
+          : t('providerConfig.credentials.connectionFailed'),
       });
     } catch (error: any) {
       setTestResult({
         success: false,
-        message: error?.message || t('providerConfig.credentials.connectionFailed')
+        message: error?.message || t('providerConfig.credentials.connectionFailed'),
       });
     } finally {
       setTesting(false);
@@ -198,7 +210,7 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
       setActionLoading('start');
       const result = await api.copilot.start();
       if (result.success) {
-        setFormData(prev => ({ ...prev, baseUrl: 'http://localhost:4141/anthropic' }));
+        setFormData((prev) => ({ ...prev, baseUrl: 'http://localhost:4141/anthropic' }));
       }
       await checkCopilotStatus();
     } catch (error) {
@@ -226,13 +238,54 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
   };
 
   const getCopilotServiceButton = () => {
-    if (actionLoading === 'install') return { text: t('providerConfig.credentials.service.installing'), disabled: true, onClick: () => {}, className: '' };
-    if (actionLoading === 'start') return { text: t('providerConfig.credentials.service.starting'), disabled: true, onClick: () => {}, className: '' };
-    if (actionLoading === 'stop') return { text: t('providerConfig.credentials.service.stopping'), disabled: true, onClick: () => {}, className: '' };
-    if (copilotStatus.running) return { text: t('providerConfig.credentials.service.stop'), disabled: false, onClick: handleStop, className: 'danger' };
-    if (!copilotStatus.installed) return { text: t('providerConfig.credentials.service.installAndStart'), disabled: false, onClick: handleInstallAndStart, className: '' };
-    if (!copilotStatus.hasToken) return { text: t('providerConfig.credentials.service.start'), disabled: true, onClick: () => {}, className: '' };
-    return { text: t('providerConfig.credentials.service.start'), disabled: false, onClick: handleStart, className: '' };
+    if (actionLoading === 'install')
+      return {
+        text: t('providerConfig.credentials.service.installing'),
+        disabled: true,
+        onClick: () => {},
+        className: '',
+      };
+    if (actionLoading === 'start')
+      return {
+        text: t('providerConfig.credentials.service.starting'),
+        disabled: true,
+        onClick: () => {},
+        className: '',
+      };
+    if (actionLoading === 'stop')
+      return {
+        text: t('providerConfig.credentials.service.stopping'),
+        disabled: true,
+        onClick: () => {},
+        className: '',
+      };
+    if (copilotStatus.running)
+      return {
+        text: t('providerConfig.credentials.service.stop'),
+        disabled: false,
+        onClick: handleStop,
+        className: 'danger',
+      };
+    if (!copilotStatus.installed)
+      return {
+        text: t('providerConfig.credentials.service.installAndStart'),
+        disabled: false,
+        onClick: handleInstallAndStart,
+        className: '',
+      };
+    if (!copilotStatus.hasToken)
+      return {
+        text: t('providerConfig.credentials.service.start'),
+        disabled: true,
+        onClick: () => {},
+        className: '',
+      };
+    return {
+      text: t('providerConfig.credentials.service.start'),
+      disabled: false,
+      onClick: handleStart,
+      className: '',
+    };
   };
 
   const handleInstallAndStart = async () => {
@@ -248,17 +301,45 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
     try {
       setActionLoading('auth');
       setAuthInfo({});
+      setAuthError(null); // 清除之前的错误
       const result = await api.copilot.auth();
+      console.log('[ProviderConfig] auth result:', JSON.stringify(result, null, 2));
+
       if (result.success) {
+        // Mac 上授权成功（命令等待完成）
         setAuthInfo({});
         await checkCopilotStatus();
         const token = await api.copilot.getToken();
-        if (token) setFormData(prev => ({ ...prev, authToken: token }));
-      } else if (result.code && result.url) {
+        if (token) setFormData((prev) => ({ ...prev, authToken: token }));
+      } else if (result.code && result.url && result.code.length > 0 && result.url.length > 0) {
+        // Windows 上显示授权码后命令就退出了，需要保持等待状态
+        console.log('[ProviderConfig] Got auth code, keeping loading state');
         setAuthInfo({ code: result.code, url: result.url });
+        // 保持 loading 状态，等待 onAuthProgress 的成功/失败消息
+        return; // 不执行 finally，保持 loading
+      } else {
+        console.log('[ProviderConfig] Auth failed:', result.message || 'Unknown error');
+        // 显示错误信息
+        if (
+          result.message &&
+          (result.message.includes('ECONNREFUSED') || result.message.includes('fetch failed'))
+        ) {
+          const errorMsg = '无法连接到 GitHub 服务器。可能需要配置网络代理或检查网络连接。';
+          console.log('[ProviderConfig] Setting authError:', errorMsg);
+          setAuthError(errorMsg);
+        } else if (result.message) {
+          // 移除 ANSI 颜色代码
+          const cleanMessage = result.message.replace(/\x1B\[\d+m/g, '');
+          console.log('[ProviderConfig] Setting authError:', cleanMessage);
+          setAuthError(cleanMessage);
+        } else {
+          console.log('[ProviderConfig] Setting authError: 授权失败，请重试');
+          setAuthError('授权失败，请重试');
+        }
       }
     } catch (error) {
       console.error('授权出错:', error);
+      setAuthError('授权过程出错: ' + (error as Error).message);
     } finally {
       setActionLoading(null);
     }
@@ -287,7 +368,12 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
     setPendingBadge(null);
   }, [provider]);
 
-  const effectiveBadgeDataUrl = pendingBadge?.type === 'set' ? pendingBadge.dataUrl : pendingBadge?.type === 'clear' ? null : badgeDataUrl;
+  const effectiveBadgeDataUrl =
+    pendingBadge?.type === 'set'
+      ? pendingBadge.dataUrl
+      : pendingBadge?.type === 'clear'
+      ? null
+      : badgeDataUrl;
 
   const handleChooseBadge = async () => {
     try {
@@ -311,7 +397,9 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-default">{t('providerConfig.title', { name: config.name })}</h2>
+      <h2 className="text-xl font-semibold text-default">
+        {t('providerConfig.title', { name: config.name })}
+      </h2>
 
       {/* 图标（用于托盘/ Dock） */}
       <div className="rounded-lg border border-default bg-surface p-3">
@@ -331,18 +419,28 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-medium text-default">{t('providerConfig.badge.label')}</h3>
+              <h3 className="text-base font-medium text-default">
+                {t('providerConfig.badge.label')}
+              </h3>
               <span className="text-xs text-muted">
-                {pendingBadge ? t('providerConfig.badge.pending') : effectiveBadgeDataUrl ? t('providerConfig.badge.uploaded') : t('providerConfig.badge.notUploaded')}
+                {pendingBadge
+                  ? t('providerConfig.badge.pending')
+                  : effectiveBadgeDataUrl
+                  ? t('providerConfig.badge.uploaded')
+                  : t('providerConfig.badge.notUploaded')}
               </span>
             </div>
             <p className="truncate text-xs text-secondary">
-              {t('providerConfig.badge.hint').split('badge.png').map((part, idx, arr) => (
-                <span key={idx}>
-                  {part}
-                  {idx < arr.length - 1 && <code className="rounded bg-muted px-1">badge.png</code>}
-                </span>
-              ))}
+              {t('providerConfig.badge.hint')
+                .split('badge.png')
+                .map((part, idx, arr) => (
+                  <span key={idx}>
+                    {part}
+                    {idx < arr.length - 1 && (
+                      <code className="rounded bg-muted px-1">badge.png</code>
+                    )}
+                  </span>
+                ))}
             </p>
           </div>
 
@@ -367,13 +465,15 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
           </div>
         </div>
       </div>
-      
+
       {/* 凭证配置 */}
       <div className="space-y-4 rounded-lg border border-default bg-surface p-4">
         <h3 className="text-base font-medium text-default">
-          {isCopilot ? t('providerConfig.credentials.copilot') : t('providerConfig.credentials.normal')}
+          {isCopilot
+            ? t('providerConfig.credentials.copilot')
+            : t('providerConfig.credentials.normal')}
         </h3>
-        
+
         {isCopilot ? (
           <>
             <div className="space-y-2">
@@ -390,14 +490,37 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
                   disabled={!copilotStatus.installed}
                   className="flex-1 rounded-md border border-default bg-surface px-3 py-2 text-sm text-default focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-muted disabled:text-muted"
                 />
-                <button 
+                <button
                   onClick={handleGetToken}
                   disabled={actionLoading === 'auth' || !copilotStatus.installed}
                   className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {actionLoading === 'auth' ? t('providerConfig.credentials.getting') : t('providerConfig.credentials.get')}
+                  {actionLoading === 'auth'
+                    ? t('providerConfig.credentials.getting')
+                    : t('providerConfig.credentials.get')}
                 </button>
               </div>
+              {authError && (
+                <div className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-medium">授权失败</div>
+                      <div className="mt-1 text-xs">{authError}</div>
+                      {authError.includes('GitHub') && (
+                        <div className="mt-2 space-y-1 text-xs">
+                          <div>• 检查网络连接是否正常</div>
+                          <div>• 如需代理，设置环境变量: HTTP_PROXY, HTTPS_PROXY</div>
+                          <div>
+                            • 或手动运行命令:{' '}
+                            <code className="rounded bg-black/10 px-1">copilot-api auth</code>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             {authInfo.code && (
               <div className="rounded-md bg-muted p-3 text-sm">
@@ -432,7 +555,7 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
                 </div>
               </div>
             )}
-            
+
             <div className="space-y-2">
               <Label.Root htmlFor="base-url" className="text-sm font-medium text-secondary">
                 {t('providerConfig.credentials.baseUrlLabel')}
@@ -445,13 +568,13 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
                   readOnly
                   className="flex-1 rounded-md border border-default bg-muted px-3 py-2 text-sm text-secondary"
                 />
-                <button 
+                <button
                   onClick={getCopilotServiceButton().onClick}
                   disabled={getCopilotServiceButton().disabled}
                   title={getCopilotServiceButton().text}
                   className={`rounded-md px-4 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                    getCopilotServiceButton().className === 'danger' 
-                      ? 'bg-danger hover:bg-danger/90' 
+                    getCopilotServiceButton().className === 'danger'
+                      ? 'bg-danger hover:bg-danger/90'
                       : 'bg-primary hover:bg-primary/90'
                   }`}
                 >
@@ -475,7 +598,7 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
                 className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-default focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label.Root htmlFor="base-url-normal" className="text-sm font-medium text-secondary">
                 {t('providerConfig.credentials.baseUrlLabel')}
@@ -491,12 +614,14 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
             </div>
 
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={handleTestConnection}
                 disabled={testing || !formData.authToken}
                 className="rounded-md border border-default bg-surface bg-hover px-4 py-2 text-sm font-medium text-secondary disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {testing ? t('providerConfig.credentials.testing') : t('providerConfig.credentials.testConnection')}
+                {testing
+                  ? t('providerConfig.credentials.testing')
+                  : t('providerConfig.credentials.testConnection')}
               </button>
               {testResult !== null && (
                 <span className={`text-sm ${testResult.success ? 'text-success' : 'text-danger'}`}>
@@ -509,20 +634,30 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
       </div>
 
       {/* 模型配置 */}
-      <div className={`space-y-4 rounded-lg border border-default bg-surface p-4 ${!canConfigureModels ? 'opacity-50' : ''}`}>
+      <div
+        className={`space-y-4 rounded-lg border border-default bg-surface p-4 ${
+          !canConfigureModels ? 'opacity-50' : ''
+        }`}
+      >
         <div className="flex items-center justify-between">
           <h3 className="text-base font-medium text-default">{t('providerConfig.models.title')}</h3>
           <div className="flex gap-2">
-            <button 
-              onClick={fetchModels} 
+            <button
+              onClick={fetchModels}
               disabled={loadingModels || !canConfigureModels}
               className="rounded-md p-2 text-secondary bg-hover disabled:cursor-not-allowed disabled:opacity-50"
-              title={!canConfigureModels ? (isCopilot ? t('providerConfig.models.needCopilotReady') : t('providerConfig.models.needToken')) : t('providerConfig.models.refresh')}
+              title={
+                !canConfigureModels
+                  ? isCopilot
+                    ? t('providerConfig.models.needCopilotReady')
+                    : t('providerConfig.models.needToken')
+                  : t('providerConfig.models.refresh')
+              }
             >
               <RefreshCw size={18} className={loadingModels ? 'animate-spin' : ''} />
             </button>
             {!isCopilot && (
-              <button 
+              <button
                 onClick={async () => {
                   await api.dialog.open({
                     id: 'edit-script',
@@ -537,7 +672,7 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
                       providerName: config.name,
                     });
                   }, 100);
-                }} 
+                }}
                 className="rounded-md p-2 text-secondary bg-hover"
                 title={t('providerConfig.models.editScript')}
               >
@@ -550,7 +685,11 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
         {!canConfigureModels && (
           <div className="rounded-md bg-warning/10 p-3 text-sm text-warning flex items-center gap-2">
             <AlertCircle size={16} />
-            <span>{isCopilot ? t('providerConfig.models.needCopilotReadyLong') : t('providerConfig.models.needTokenLong')}</span>
+            <span>
+              {isCopilot
+                ? t('providerConfig.models.needCopilotReadyLong')
+                : t('providerConfig.models.needTokenLong')}
+            </span>
           </div>
         )}
 
@@ -560,17 +699,17 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
             <span>{fetchError}</span>
           </div>
         )}
-        
+
         {MODEL_ROLES.map((role) => {
           // 构建选项列表
-          const options = modelList.map(model => ({
+          const options = modelList.map((model) => ({
             value: model.id,
             label: model.name || model.id,
           }));
 
           // 如果当前配置的模型不在列表中，添加到选项中
           const currentModel = formData.models[role];
-          if (currentModel && !modelList.find(m => m.id === currentModel)) {
+          if (currentModel && !modelList.find((m) => m.id === currentModel)) {
             options.unshift({
               value: currentModel,
               label: t('providerConfig.models.currentConfigured', { id: currentModel }),
@@ -596,8 +735,8 @@ export function ProviderConfig({ provider, config, onSave }: ProviderConfigProps
       </div>
 
       <div className="flex justify-end">
-        <button 
-          onClick={handleSave} 
+        <button
+          onClick={handleSave}
           disabled={saving}
           className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >

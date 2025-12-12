@@ -64,7 +64,7 @@ export function ProviderList({ config, onSwitch, onSelect }: ProviderListProps) 
   useEffect(() => {
     // 监听来自对话框的消息
     if (!api?.dialog?.onMessage) return;
-    
+
     const unsubscribe = api.dialog.onMessage((data: any) => {
       if (data.action === 'provider-added') {
         // 刷新配置
@@ -82,12 +82,14 @@ export function ProviderList({ config, onSwitch, onSelect }: ProviderListProps) 
   const isProviderConfigured = (providerId: ProviderId): boolean => {
     const provider = config.providers[providerId];
     if (!provider) return false;
-    
+
     if (providerId === BUILTIN_PROVIDER_COPILOT) {
       // Copilot 需要安装、运行、有 Token
-      return copilotStatus?.installed && copilotStatus?.running && copilotStatus?.hasToken || false;
+      return (
+        (copilotStatus?.installed && copilotStatus?.running && copilotStatus?.hasToken) || false
+      );
     }
-    
+
     // 其他 provider 需要有 authToken
     return !!provider.authToken;
   };
@@ -110,30 +112,33 @@ export function ProviderList({ config, onSwitch, onSelect }: ProviderListProps) 
 
   const handleDeleteProvider = async (providerId: ProviderId, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (providerId === BUILTIN_PROVIDER_COPILOT) {
       await api.dialog.showError(t('providerList.deleteBuiltInCopilot'));
       return;
     }
-    
+
     const provider = config.providers[providerId];
-    
+
     // 二次确认（使用原生确认框）
     if (!confirm(t('providerList.confirmDelete', { name: provider?.name ?? providerId }))) {
       return;
     }
-    
-    api.deleteProvider?.(providerId).then(() => {
-      window.location.reload();
-    }).catch((err: unknown) => {
-      alert(t('providerList.deleteFailed', { error: String(err) }));
-    });
+
+    api
+      .deleteProvider?.(providerId)
+      .then(() => {
+        window.location.reload();
+      })
+      .catch((err: unknown) => {
+        alert(t('providerList.deleteFailed', { error: String(err) }));
+      });
   };
 
   const getDisabledReason = (providerId: ProviderId): string | undefined => {
     const provider = config.providers[providerId];
     if (!provider) return t('providerList.reasons.configMissing');
-    
+
     if (providerId === BUILTIN_PROVIDER_COPILOT) {
       if (!copilotStatus?.installed) return t('providerList.reasons.installCopilotApi');
       if (!copilotStatus?.hasToken) return t('providerList.reasons.githubAuth');
@@ -150,26 +155,27 @@ export function ProviderList({ config, onSwitch, onSelect }: ProviderListProps) 
         {config.providerOrder.map((providerId: ProviderId) => {
           const provider = config.providers[providerId];
           if (!provider) return null;
-          
+
           const isActive = config.currentProvider === providerId;
           const isCopilot = providerId === BUILTIN_PROVIDER_COPILOT;
           const isConfigured = isProviderConfigured(providerId);
           const disabledReason = getDisabledReason(providerId);
-          
+
           return (
-            <div 
-              key={providerId} 
+            <div
+              key={providerId}
               className={`
                 relative rounded-lg border p-4 transition-all
-                ${isActive 
-                  ? 'border-primary bg-primary/5 shadow-sm' 
-                  : 'border-default bg-surface border-hover hover:shadow-sm'
+                ${
+                  isActive
+                    ? 'border-primary bg-primary/5 shadow-sm'
+                    : 'border-default bg-surface border-hover hover:shadow-sm'
                 }
                 ${!isConfigured ? 'opacity-75' : ''}
               `}
             >
               {!isCopilot && (
-                <button 
+                <button
                   onClick={(e) => handleDeleteProvider(providerId, e)}
                   className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded text-muted danger-hover transition-colors"
                   title={t('providerList.deleteTitle')}
@@ -177,43 +183,46 @@ export function ProviderList({ config, onSwitch, onSelect }: ProviderListProps) 
                   <X size={16} />
                 </button>
               )}
-              
+
+              {/* 标题 */}
+              <h3 className="mb-3 text-base font-medium text-default truncate flex items-center gap-2">
+                {badgeDataMap[providerId] && (
+                  <img
+                    src={badgeDataMap[providerId] as string}
+                    alt=""
+                    className="h-5 w-5 rounded border border-default bg-surface object-contain"
+                    draggable={false}
+                  />
+                )}
+                <span className="truncate">{provider.name}</span>
+                {isCopilot && copilotStatus && (
+                  <span className="ml-2 text-xs text-muted">{getCopilotStatusText()}</span>
+                )}
+              </h3>
+
+              {/* 详情和按钮 */}
               <div className="flex items-end justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-medium text-default truncate flex items-center gap-2">
-                    {badgeDataMap[providerId] && (
-                      <img
-                        src={badgeDataMap[providerId] as string}
-                        alt=""
-                        className="h-5 w-5 rounded border border-default bg-surface object-contain"
-                        draggable={false}
-                      />
-                    )}
-                    <span className="truncate">{provider.name}</span>
-                    {isCopilot && copilotStatus && (
-                      <span className="ml-2 text-xs text-muted">
-                        {getCopilotStatusText()}
-                      </span>
-                    )}
-                  </h3>
-                  <p className="mt-1 text-xs text-muted font-mono truncate">
-                    {provider.baseUrl}
-                  </p>
+                  <p className="text-xs text-muted font-mono truncate">{provider.baseUrl}</p>
                   <p className="mt-1 text-xs text-secondary">
-                    Sonnet: {provider.models.sonnet || <span className="text-muted">{t('providerList.notConfigured')}</span>}
+                    Sonnet:{' '}
+                    {provider.models.sonnet || (
+                      <span className="text-muted">{t('providerList.notConfigured')}</span>
+                    )}
                   </p>
                 </div>
-                
+
                 <div className="flex gap-2 flex-shrink-0">
-                  <button 
+                  <button
                     onClick={() => !isActive && isConfigured && onSwitch(providerId)}
                     disabled={isActive || !isConfigured}
                     title={isActive ? t('providerList.activeTitle') : disabledReason}
                     className={`
                       rounded-md px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap min-w-[100px]
-                      ${isActive
-                        ? 'bg-primary/20 text-primary cursor-default'
-                        : isConfigured
+                      ${
+                        isActive
+                          ? 'bg-primary/20 text-primary cursor-default'
+                          : isConfigured
                           ? 'bg-primary text-white hover:bg-primary/90'
                           : 'bg-muted text-muted cursor-not-allowed'
                       }
@@ -221,7 +230,7 @@ export function ProviderList({ config, onSwitch, onSelect }: ProviderListProps) 
                   >
                     {isActive ? t('providerList.inUse') : t('providerList.switchTo')}
                   </button>
-                  <button 
+                  <button
                     onClick={() => onSelect(providerId)}
                     className="rounded-md border border-default bg-surface px-4 py-2 text-sm font-medium text-secondary bg-hover transition-colors whitespace-nowrap min-w-[80px]"
                   >

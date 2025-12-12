@@ -70,7 +70,7 @@ export function CopilotPanel() {
     // - 有授权码时: 2秒（等待用户完成授权）
     // - 正在执行操作: 1秒（实时更新）
     // - 正常情况: 5秒
-    const interval = authInfo.code ? 2000 : (actionLoading ? 1000 : 5000);
+    const interval = authInfo.code ? 2000 : actionLoading ? 1000 : 5000;
     const timer = setInterval(checkStatus, interval);
     return () => clearInterval(timer);
   }, [checkStatus, authInfo.code, actionLoading]);
@@ -95,9 +95,9 @@ export function CopilotPanel() {
     try {
       setActionLoading('auth');
       setAuthInfo({});
-      
+
       const result = await api.copilot.auth();
-      
+
       if (result.success) {
         setAuthInfo({});
         await checkStatus();
@@ -129,12 +129,12 @@ export function CopilotPanel() {
       const result = await api.copilot.start();
       // 立即检查一次
       await checkStatus();
-      
+
       // 启动后持续检查状态，确保视图更新
       if (result.success) {
         // 每隔1秒检查一次，共检查5次
         for (let i = 0; i < 5; i++) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           await checkStatus();
         }
       }
@@ -151,7 +151,7 @@ export function CopilotPanel() {
       setActionLoading('stop');
       await api.copilot.stop();
       // 等待1秒后检查状态
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       await checkStatus();
     } catch (error) {
       console.error('停止出错:', error);
@@ -176,30 +176,39 @@ export function CopilotPanel() {
   return (
     <div className="copilot-panel">
       <h2>{t('copilotPanel.title')}</h2>
-      <p className="description">
-        {t('copilotPanel.description')}
-      </p>
+      <p className="description">{t('copilotPanel.description')}</p>
 
       {/* 操作区域 */}
       <div className="actions-section">
-        
         {/* 安装 */}
-        <div className={`action-card ${status.installed ? 'completed' : ''}`}>
-          <div className="action-row">
-            <div className="action-info">
-              <h4>{t('copilotPanel.actions.install.title')}</h4>
-              <p className="action-desc">{status.installed ? t('copilotPanel.actions.install.descInstalled') : t('copilotPanel.actions.install.descNotInstalled')}</p>
-            </div>
-            <div className="action-right">
+        <div
+          className={`rounded-lg border p-4 ${
+            status.installed ? 'border-success/30 bg-success/5' : 'border-default bg-surface'
+          }`}
+        >
+          <h4 className="mb-3 text-base font-medium text-default">
+            {t('copilotPanel.actions.install.title')}
+          </h4>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-secondary">
+              {status.installed
+                ? t('copilotPanel.actions.install.descInstalled')
+                : t('copilotPanel.actions.install.descNotInstalled')}
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
               {status.installed ? (
-                <span className="status-tag success">{t('copilotPanel.actions.install.statusInstalled')}</span>
+                <span className="status-tag success">
+                  {t('copilotPanel.actions.install.statusInstalled')}
+                </span>
               ) : (
-                <button 
+                <button
                   className="btn-action"
                   onClick={handleInstall}
                   disabled={actionLoading === 'install'}
                 >
-                  {actionLoading === 'install' ? t('copilotPanel.actions.install.installing') : t('copilotPanel.actions.install.install')}
+                  {actionLoading === 'install'
+                    ? t('copilotPanel.actions.install.installing')
+                    : t('copilotPanel.actions.install.install')}
                 </button>
               )}
             </div>
@@ -207,10 +216,18 @@ export function CopilotPanel() {
         </div>
 
         {/* 认证 */}
-        <div className={`action-card ${!status.installed ? 'disabled' : ''} ${status.hasToken && !authInfo.code ? 'completed' : ''}`}>
-          <div className="action-row">
-            <div className="action-info">
-              <h4>{t('copilotPanel.actions.auth.title')}</h4>
+        <div
+          className={`rounded-lg border p-4 ${!status.installed ? 'opacity-50' : ''} ${
+            status.hasToken && !authInfo.code
+              ? 'border-success/30 bg-success/5'
+              : 'border-default bg-surface'
+          }`}
+        >
+          <h4 className="mb-3 text-base font-medium text-default">
+            {t('copilotPanel.actions.auth.title')}
+          </h4>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
               {authInfo.code ? (
                 <div className="auth-inline">
                   <div className="flex min-w-0 items-center gap-2 overflow-hidden">
@@ -223,30 +240,44 @@ export function CopilotPanel() {
                     >
                       {authInfo.url}
                     </a>
-                    <button className="btn-icon shrink-0" onClick={() => copyToClipboard(authInfo.url || '')} title={t('copilotPanel.actions.auth.copyLink')}>
+                    <button
+                      className="btn-icon shrink-0"
+                      onClick={() => copyToClipboard(authInfo.url || '')}
+                      title={t('copilotPanel.actions.auth.copyLink')}
+                    >
                       <Copy size={14} />
                     </button>
                   </div>
                   <div className="mt-1 flex min-w-0 items-center gap-2 overflow-hidden">
                     <span className="shrink-0">{t('copilotPanel.actions.auth.enterCode')}</span>
                     <strong className="min-w-0 flex-1 truncate">{authInfo.code}</strong>
-                    <button className="btn-icon shrink-0" onClick={() => copyToClipboard(authInfo.code || '')} title={t('copilotPanel.actions.auth.copyCode')}>
+                    <button
+                      className="btn-icon shrink-0"
+                      onClick={() => copyToClipboard(authInfo.code || '')}
+                      title={t('copilotPanel.actions.auth.copyCode')}
+                    >
                       <Copy size={14} />
                     </button>
                   </div>
                 </div>
               ) : (
-                <p className="action-desc">{status.hasToken ? t('copilotPanel.actions.auth.descAuthed') : t('copilotPanel.actions.auth.descNeedAuth')}</p>
+                <p className="action-desc">
+                  {status.hasToken
+                    ? t('copilotPanel.actions.auth.descAuthed')
+                    : t('copilotPanel.actions.auth.descNeedAuth')}
+                </p>
               )}
             </div>
-            <div className="action-right">
+            <div className="flex shrink-0 items-center gap-2">
               {status.installed && !status.hasToken && !authInfo.code && (
-                <button 
+                <button
                   className="btn-action"
                   onClick={handleAuth}
                   disabled={actionLoading === 'auth'}
                 >
-                  {actionLoading === 'auth' ? t('copilotPanel.actions.auth.authing') : t('copilotPanel.actions.auth.startAuth')}
+                  {actionLoading === 'auth'
+                    ? t('copilotPanel.actions.auth.authing')
+                    : t('copilotPanel.actions.auth.startAuth')}
                 </button>
               )}
               {authInfo.code && (
@@ -254,15 +285,17 @@ export function CopilotPanel() {
               )}
               {status.hasToken && !authInfo.code && (
                 <div className="action-btn-group">
-                  <span className="status-tag success">{t('copilotPanel.actions.auth.authed')}</span>
-                  <button 
+                  <span className="status-tag success">
+                    {t('copilotPanel.actions.auth.authed')}
+                  </span>
+                  <button
                     className="btn-action btn-secondary-action"
                     onClick={handleAuth}
                     disabled={actionLoading === 'auth'}
                   >
                     {actionLoading === 'auth' ? '...' : t('copilotPanel.actions.auth.reauth')}
                   </button>
-                  <button 
+                  <button
                     className="btn-action btn-danger-action"
                     onClick={handleClearToken}
                     disabled={actionLoading === 'clear'}
@@ -277,37 +310,55 @@ export function CopilotPanel() {
         </div>
 
         {/* 服务控制 */}
-        <div className={`action-card ${(!status.hasToken || authInfo.code) ? 'disabled' : ''} ${status.running ? 'completed' : ''}`}>
-          <div className="action-row">
-            <div className="action-info">
-              <h4>{t('copilotPanel.actions.service.title')}</h4>
-              <p className="action-desc">{status.running ? t('copilotPanel.actions.service.descRunning') : (authInfo.code ? t('copilotPanel.actions.service.descNeedAuthFirst') : t('copilotPanel.actions.service.descStart'))}</p>
-            </div>
-            <div className="action-right">
-              {status.hasToken && !authInfo.code && (
-                status.running ? (
+        <div
+          className={`rounded-lg border p-4 ${
+            !status.hasToken || authInfo.code ? 'opacity-50' : ''
+          } ${status.running ? 'border-success/30 bg-success/5' : 'border-default bg-surface'}`}
+        >
+          <h4 className="mb-3 text-base font-medium text-default">
+            {t('copilotPanel.actions.service.title')}
+          </h4>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-secondary">
+              {status.running
+                ? t('copilotPanel.actions.service.descRunning')
+                : authInfo.code
+                ? t('copilotPanel.actions.service.descNeedAuthFirst')
+                : t('copilotPanel.actions.service.descStart')}
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              {status.hasToken &&
+                !authInfo.code &&
+                (status.running ? (
                   <div className="action-btn-group">
-                    <span className="status-tag success">{t('copilotPanel.actions.service.running')}</span>
-                    <button 
+                    <span className="status-tag success">
+                      {t('copilotPanel.actions.service.running')}
+                    </span>
+                    <button
                       className="btn-action btn-danger-action"
                       onClick={handleStop}
                       disabled={actionLoading === 'stop'}
                     >
-                      {actionLoading === 'stop' ? t('copilotPanel.actions.service.stopping') : t('copilotPanel.actions.service.stop')}
+                      {actionLoading === 'stop'
+                        ? t('copilotPanel.actions.service.stopping')
+                        : t('copilotPanel.actions.service.stop')}
                     </button>
                   </div>
                 ) : (
-                  <button 
+                  <button
                     className="btn-action"
                     onClick={handleStart}
                     disabled={actionLoading === 'start'}
                   >
-                    {actionLoading === 'start' ? t('copilotPanel.actions.service.starting') : t('copilotPanel.actions.service.startService')}
+                    {actionLoading === 'start'
+                      ? t('copilotPanel.actions.service.starting')
+                      : t('copilotPanel.actions.service.startService')}
                   </button>
-                )
-              )}
+                ))}
               {(!status.hasToken || authInfo.code) && (
-                <span className="status-tag disabled">{t('copilotPanel.actions.service.notReady')}</span>
+                <span className="status-tag disabled">
+                  {t('copilotPanel.actions.service.notReady')}
+                </span>
               )}
             </div>
           </div>
